@@ -40,11 +40,11 @@ public abstract class Layer
 
         this.input = input; // memory for input allocated in respective layer
 
-        dL_dz = new double[outputSize];
-        dL_dx = new double[inputSize];
+        dL_dz = new double[ outputSize ];
+        dL_dx = new double[ inputSize ];
 
-        dL_dW = new double[inputSize][outputSize];
-        dL_db = new double[outputSize];
+        dL_dW = new double[ inputSize ][ outputSize ];
+        dL_db = new double[ outputSize ];
 
         initWeights();
         initBiases();
@@ -72,85 +72,87 @@ public abstract class Layer
     {
         // Weight Gradient
                                         // (m x n) = (m x 1) x (1 x n)
-        MatrixOperations.vecTransposeXplyVec(input, dL_dz, dL_dW); // dL/dW = (dz/dW)T x dL/dz = (x)T x dL/dz
+        MatrixOperations.vecTransposeXplyVec( input, dL_dz, dL_dW ); // dL/dW = (dz/dW)T x dL/dz = (x)T x dL/dz
 
         // Bias Gradient
-        for ( int i = 0; i < outputSize; i++)
+        for ( int i = 0; i < outputSize; i++ )
         
-            dL_db[i] = dL_dz[i];            // dL/db = dL_dz -> 1 x n
+            dL_db[ i ] = dL_dz[ i ];            // dL/db = dL_dz -> 1 x n
         
 
         // Downstream Gradient
-        MatrixOperations.vecXplyMatrixTranspose(dL_dz, weights, dL_dx); // dL/dx = dL/dz x dz/dx , dz/dx = WT -> 1 x m
+        MatrixOperations.vecXplyMatrixTranspose( dL_dz, weights, dL_dx ); // dL/dx = dL/dz x dz/dx , dz/dx = WT -> 1 x m
         
     }
 
     public void updateWeights( double LEARNING_RATE )
     {
-        for (int i = 0; i < inputSize; i++)   // Gradient Decent
+        for ( int i = 0; i < inputSize; i++ )   // Gradient Decent
         
-            for (int j = 0; j < outputSize; j++)
+            for ( int j = 0; j < outputSize; j++ ) 
             
-                weights[i][j] -= LEARNING_RATE * dL_dW[i][j];  // Wij : Wij - learning rate x dL/dWij 
+                weights[ i ][ j ] -= LEARNING_RATE * dL_dW[ i ][ j ];  // Wij : Wij - learning rate x dL/dWij 
             
     }
 
-    public void updateBiases( double LEARNING_RATE)
+    public void updateBiases( double LEARNING_RATE )
     {
-        for (int i = 0; i < outputSize; i++)   // Gradient Decent
+        for ( int i = 0; i < outputSize; i++ )   // Gradient Decent
         
-            bias[i] -= LEARNING_RATE * dL_db[i];  // bi : bi - learning rate x dL/dbi
+            bias[ i ] -= LEARNING_RATE * dL_db[ i ];  // bi : bi - learning rate x dL/dbi
 
     }
 
 
     protected void initWeights()
     {
-        weights = new double[inputSize][outputSize]; // m x n
+        weights = new double[ inputSize ][ outputSize ]; // m x n
 
         double stddev = 0.01;
 
-        if (this.getClass() == OutputLayer.class)
-            stddev = Math.sqrt(2.0 / (inputSize + outputSize));   // Xaviot grout init for output layer
+        if ( this.getClass() == OutputLayer.class )
+            stddev = Math.sqrt( 2.0 / ( inputSize + outputSize ) );   // Xaviot grout init for output layer
         else
-            stddev = Math.sqrt(2.0 / inputSize);  // He initialization for ReLU
+            stddev = Math.sqrt( 2.0 / inputSize );  // He initialization for ReLU
 
-        for (int i = 0; i < inputSize; i++)
+        for ( int i = 0; i < inputSize; i++ )
 
-            for (int j = 0; j < outputSize; j++)
+            for ( int j = 0; j < outputSize; j++ )
 
-                weights[i][j] = rand.nextGaussian() * stddev;
+                weights[ i ][ j ] = rand.nextGaussian() * stddev;
         
-        System.out.println("x");
+        System.out.println("Weights Init" );
     }
 
     private void initBiases()
     {
-        bias = new double[outputSize];  // 1 x m
+        bias = new double[ outputSize ];  // 1 x m
 
-        Arrays.fill(bias, 0.0);  // zero init for biases
+        Arrays.fill( bias, 0.0 );  // zero init for biases
+
+        System.out.println( "Biases Init" );
     }
 
 
     
     public void resetGradients()   // resetting gradients back to zero 
     {
-        Arrays.fill(dL_dz, 0.0);
-        Arrays.fill(dL_dx, 0.0);
+        Arrays.fill( dL_dz, 0.0 );
+        Arrays.fill( dL_dx, 0.0 );
 
 
-        for (int i = 0; i < inputSize; i++)
+        for ( int i = 0; i < inputSize; i++ )
             
-            Arrays.fill(dL_dW[i], 0.0);
+            Arrays.fill( dL_dW[ i ], 0.0 );
         
 
-        Arrays.fill(dL_db, 0.0);
+        Arrays.fill( dL_db, 0.0 );
     }
 
 
-    public void setInput(double[] input) 
+    public void setInput( double[] input ) 
     {
-        this.input = Arrays.copyOf(input, input.length);
+        this.input = Arrays.copyOf( input, inputSize );
     }
 
     public double[] getOutput() { return actOutput; }

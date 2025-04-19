@@ -8,8 +8,10 @@ import layers.HiddenLayer;
 import layers.Layer;
 import layers.OutputLayer;
 
+
 public class NeuralNetwork
 {
+    
     private Layer[] layers;                // array of all layers
 
     private List< Image > images;          // training / testing images

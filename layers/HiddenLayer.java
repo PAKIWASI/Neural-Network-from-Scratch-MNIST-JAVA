@@ -8,23 +8,23 @@ public class HiddenLayer extends Layer
 
 
 
-    public HiddenLayer(double[] input, int outputSize)
+    public HiddenLayer( double[] input, int outputSize )
     {
-        super(input, outputSize);
+        super( input, outputSize );
     }
 
 
                                // dL/da is upstream gradient
-    public void calculateLocalGradient(double[] upstreamGradient)
+    public void calculateLocalGradient( double[] upstreamGradient )
     {
         this.dL_da = upstreamGradient;  // 1 x n
 
-        double[] da_dz = new double[outputSize]; // intermediate derivitive, needed to calc dL/dz
-        ReLuDerivitive(preActOutput, da_dz);   // da_dz = d/dz (a(z)) = a'(z)  -> 1 x n
+        double[] da_dz = new double[ outputSize ]; // intermediate derivitive, needed to calc dL/dz
+        ReLuDerivitive( preActOutput, da_dz );   // da_dz = d/dz (a(z)) = a'(z)  -> 1 x n
 
 
         // Local Gradient
-        MatrixOperations.vecXplyElementWise(dL_da, da_dz, dL_dz);  // dL/dz = dL/da x da/dz (element-wise xply) -> 1 x n 
+        MatrixOperations.vecXplyElementWise( dL_da, da_dz, dL_dz );  // dL/dz = dL/da x da/dz (element-wise xply) -> 1 x n 
                                                                             
 
         super.calculateLocalGradient();  // get dL/dW, dL/b, dL/dx
@@ -32,33 +32,33 @@ public class HiddenLayer extends Layer
     }
 
     @Override     // ReLu Activation  a = relu(z)   -> 1 x n
-    protected void activation(double[] preActOutput, double[] actOutput)
+    protected void activation( double[] preActOutput, double[] actOutput )
     {
-        for ( int i = 0; i < outputSize; i++)
+        for ( int i = 0; i < outputSize; i++ )
         {
-            if (preActOutput[i] <= 0)
+            if ( preActOutput[ i ] <= 0 )
 
-                actOutput[i] = 0;
+                actOutput[ i ] = 0;
 
             else
 
-                actOutput[i] = preActOutput[i];
+                actOutput[ i ] = preActOutput[ i ];
         }
     }
 
 
-    private void ReLuDerivitive(double[] preActOutput, double[] da_dz) 
+    private void ReLuDerivitive( double[] preActOutput, double[] da_dz ) 
     {
         
-        for ( int i = 0; i < outputSize; i++)
+        for ( int i = 0; i < outputSize; i++ )
         {
-            if (preActOutput[i] <= 0)
+            if ( preActOutput[ i ] <= 0 )
 
-                da_dz[i] = 0;
+                da_dz[ i ] = 0;
 
             else
 
-                da_dz[i] = 1;
+                da_dz[ i ] = 1;
         }
     }
 
