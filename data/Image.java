@@ -21,13 +21,13 @@ public class Image
     @Override
     public String toString()  // print image in console
     {
-        System.out.println("Label: " + label);
+        System.out.println( "Label: " + label );
 
         for( int i = 0; i < data.length; i++ )
         {
-            if (data.length % 28 == 0)
+            if ( data.length % 28 == 0 )
                 System.out.println();
-            System.out.println(data[i]);
+            System.out.println( data[ i ] );
         }
         
         return "";

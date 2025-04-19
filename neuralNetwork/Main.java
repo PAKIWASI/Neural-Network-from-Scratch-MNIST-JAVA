@@ -7,7 +7,7 @@ public class Main
 
     public static void main(String[] args)
     {
-        double LEARNING_RATE = 0.01;
+        double LEARNING_RATE = 0.007;
 
         int[] hidden = { 128, 64 };
 
@@ -16,6 +16,5 @@ public class Main
         nn.train();
         nn.test();
     }
-    
 
 }
