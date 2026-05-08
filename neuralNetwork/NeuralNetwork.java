@@ -43,7 +43,7 @@ public class NeuralNetwork
 
     public void train()     // train model on mnist data  
     {                     // get images from dataReader 
-        images = DataReader.readData("D:\\Programming Projects\\Java Programmes\\Neural-Network\\src\\data\\mnist_train.csv");
+        images = DataReader.readData("dataset/mnist_train.csv");
     
         for ( int i = 0; i < images.size(); i++ ) 
         {
@@ -66,7 +66,7 @@ public class NeuralNetwork
 
     public void test()   // test the network on seperate data
     {
-        images = DataReader.readData("D:\\Programming Projects\\Java Programmes\\Neural-Network\\src\\data\\mnist_test.csv");
+        images = DataReader.readData("dataset/mnist_test.csv");
         
         int total = images.size();
         int correct = 0;
