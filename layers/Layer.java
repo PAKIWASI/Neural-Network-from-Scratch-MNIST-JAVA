@@ -1,10 +1,16 @@
-package layers;
+package layers; 
 
 import java.util.Arrays;
 import java.util.Random;
 
+import layers.strategies.ActivationStrategy;
+import layers.strategies.SoftmaxStrategy;
 
-public abstract class Layer 
+/**
+ * REFACTORED: Now a concrete class using Strategy Pattern.
+ * Removed: 'abstract' keyword and subclass-specific logic.
+ */
+public class Layer 
 {
     private double[] input;           // x      1 x m input vector from prev layer
     private double[][] weights;       // W      m x n weight matrix
@@ -17,6 +23,8 @@ public abstract class Layer
     protected final int inputSize;
     protected final int outputSize;
 
+    // STRATEGY: Decouples activation math from this class
+    protected ActivationStrategy strategy;
 
     // Gradients
     protected double[] dL_dz;  // local gradient dL/dz = dL/da x (da/dz)T (1 x n) x (n x 1) = n x n (here->1 x n, we work implicitly, element wise xply)  
@@ -27,10 +35,11 @@ public abstract class Layer
     protected double[][] dL_dW;   // dL/dW = (dz/dW)T x dL/dz = (x)T x dL/dz 
     protected double[] dL_db;     // dL/db = dL/dz x dz/db = dL/dz x 1     (1 x n) = (1 x n) x 1 , dz/db = 1
 
-
-    public Layer( double[] input, int outputSize )
+    // REFACTORED: Constructor now accepts the Strategy
+    public Layer( double[] input, int outputSize, ActivationStrategy strategy )
     {
         rand = new Random();
+        this.strategy = strategy; // MOVED FROM: Subclasses
 
         preActOutput = new double[ outputSize ]; // 1 x n
         actOutput = new double[ outputSize ];
@@ -61,18 +70,32 @@ public abstract class Layer
             preActOutput[ i ] += bias[ i ];
 
          
-        activation( preActOutput, actOutput );  // apply activation a = act(z)  -> 1 x n
+        // FORWARDED TO: Strategy
+        strategy.forward( preActOutput, actOutput );  
+        // apply activation a = act(z)  -> 1 x n
     }
 
-
-    protected abstract void activation( double[] preActOutput, double[] actOutput ); //activation function (unque to layer type)
-    
-
-    protected void calculateLocalGradient()
+    /**
+     * REFACTORED: Generic gradient calculation using Strategy
+     * upstreamGradient dL/da
+    */
+    //made public to use in neural networks class
+    public void calculateLocalGradient(double[] upstreamGradient)
     {
+        double[] da_dz = new double[ outputSize ];
+        
+        
+        // 1. Get derivative from strategy (Replaces ReLuDerivitive)
+        strategy.getDerivative( preActOutput, da_dz );
         // Weight Gradient
-                                        // (m x n) = (m x 1) x (1 x n)
-        MatrixOperations.vecTransposeXplyVec( input, dL_dz, dL_dW ); // dL/dW = (dz/dW)T x dL/dz = (x)T x dL/dz
+        // (m x n) = (m x 1) x (1 x n)
+
+        // 2. Compute local gradient dL/dz = upstream * local_derivative
+        MatrixOperations.vecXplyElementWise( upstreamGradient, da_dz, dL_dz );
+
+        // 3. Compute Weight, Bias, and Downstream gradients (Original Logic)
+        MatrixOperations.vecTransposeXplyVec( input, dL_dz, dL_dW ); 
+        // dL/dW = (dz/dW)T x dL/dz = (x)T x dL/dz
 
         // Bias Gradient
         for ( int i = 0; i < outputSize; i++ )
@@ -82,7 +105,6 @@ public abstract class Layer
 
         // Downstream Gradient
         MatrixOperations.vecXplyMatrixTranspose( dL_dz, weights, dL_dx ); // dL/dx = dL/dz x dz/dx , dz/dx = WT -> 1 x m
-        
     }
 
     public void updateWeights( double LEARNING_RATE )
@@ -110,7 +132,9 @@ public abstract class Layer
 
         double stddev = 0.01;
 
-        if ( this.getClass() == OutputLayer.class )
+        // SMELL FIXED: Removed 'if (this.getClass() == OutputLayer.class)'
+        // Now using a simple check based on the strategy type or passing stddev
+        if ( strategy instanceof SoftmaxStrategy )
             stddev = Math.sqrt( 2.0 / ( inputSize + outputSize ) );   // Xaviot grout init for output layer
         else
             stddev = Math.sqrt( 2.0 / inputSize );  // He initialization for ReLU

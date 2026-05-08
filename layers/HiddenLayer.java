@@ -1,4 +1,4 @@
-package layers;
+/*package layers;
 
 
 public class HiddenLayer extends Layer
@@ -64,3 +64,4 @@ public class HiddenLayer extends Layer
 
 
 }
+*/

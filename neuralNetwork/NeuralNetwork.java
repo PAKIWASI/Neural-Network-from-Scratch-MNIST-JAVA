@@ -4,9 +4,10 @@ import java.util.List;
 
 import data.DataReader;
 import data.Image;
-import layers.HiddenLayer;
 import layers.Layer;
-import layers.OutputLayer;
+import layers.strategies.*;// Use the new Layer and Strategies
+
+
 
 
 public class NeuralNetwork
@@ -134,18 +135,28 @@ public class NeuralNetwork
         for ( Layer l : layers ) l.resetGradients();  // reset the gradients computed in last iteration
 
         
-        OutputLayer o = ( OutputLayer ) layers[ size - 1 ]; // start with output layer
-        o.calculateLocalGradient( trueOutput );           // compute the local gradient and all other gradients needed to update parameters
+        Layer outputLayer = layers[size - 1]; // start with output layer
 
-        double[] upstreamGradient = o.getUpstreamGradient();  // the gradient that each layer sends to prev layer
+
+        // Calculate (a - y) as the upstream gradient for Softmax + Cross-Entropy
+        double[] outputError = new double[OutputSize];
+        for (int i = 0; i < OutputSize; i++) {
+            outputError[i] = outputLayer.getOutput()[i] - trueOutput[i];
+        } 
+        
+        // NO CASTING NEEDED: Generic method call
+        outputLayer.calculateLocalGradient(outputError);
+
+        // 2. Backpropagate through hidden layers
+        double[] upstreamGradient = outputLayer.getUpstreamGradient();  // the gradient that each layer sends to prev layer
 
 
         for ( int i = size - 2; i >= 0; i-- )  // backprop through all layers till input layer
         {
-            HiddenLayer h = ( HiddenLayer ) layers[ i ];
-            h.calculateLocalGradient( upstreamGradient );
+            // NO CASTING NEEDED: All layers are just 'Layer'
+            layers[i].calculateLocalGradient( upstreamGradient );
 
-            upstreamGradient = h.getUpstreamGradient();    // set the upstream gradient for each layer 
+            upstreamGradient = layers[i].getUpstreamGradient();    // set the upstream gradient for each layer 
         }
     }
 
@@ -163,16 +174,16 @@ public class NeuralNetwork
         
         layers = new Layer[ size ];
 
-        
-        layers[ 0 ] = new HiddenLayer( currInput, hiddenLayers[ 0 ] ); // main input to network goes to first hidden
+        // 1. Create First Hidden Layer
+        layers[ 0 ] = new Layer( currInput, hiddenLayers[ 0 ], new RELUStrategy() ); // main input to network goes to first hidden
 
-
+         // 2. Create number of Hidden Layers
         for ( int i = 1; i < size - 1; i++ )
         
-            layers[ i ]  = new HiddenLayer( layers[ i - 1 ].getOutput(), hiddenLayers[ i ] ); // each next layer gets reference to output of prev layer as input
+            layers[ i ]  = new Layer( layers[ i - 1 ].getOutput(), hiddenLayers[ i ], new RELUStrategy() ); // each next layer gets reference to output of prev layer as input
         
-
-        layers[ size - 1 ] = new OutputLayer( layers[ size - 2 ].getOutput(), OutputSize );
+        // 3. Create Output Layer with SoftMax
+        layers[ size - 1 ] = new Layer( layers[ size - 2 ].getOutput(), OutputSize, new SoftmaxStrategy() );
 
         currOutput = layers[ size - 1 ].getOutput();      // main output of network 
     }

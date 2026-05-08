@@ -1,4 +1,4 @@
-package layers;
+/*package layers;
 
 
 public class OutputLayer extends Layer
@@ -57,4 +57,4 @@ public class OutputLayer extends Layer
     
 
     
-}
+}*/
