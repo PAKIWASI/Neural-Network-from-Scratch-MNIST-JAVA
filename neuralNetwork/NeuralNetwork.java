@@ -4,18 +4,23 @@ import java.util.List;
 
 import data.DataReader;
 import data.Image;
-import layers.HiddenLayer;
+
 import layers.Layer;
-import layers.OutputLayer;
+import layers.LayerFactory;
+// Use the LayerFactory to implement the layers
+import neuralNetwork.states.NetworkState;
+import neuralNetwork.states.TestingState;
+
+
 
 
 public class NeuralNetwork
 {
     
     private Layer[] layers;                // array of all layers
+    private NetworkState currentState;      // THE STATE (Mode)
 
-    private List< Image > images;          // training / testing images
-    private double[] currInput;            // the current input to the network
+    private double[] currInput;            // the current input the network
     private double[] currOutput;           // the current ouput from the network
 
     private final int inputSize = 784;     // size of mnist image vector
@@ -39,82 +44,41 @@ public class NeuralNetwork
 
         initLayers();                       // assign layers by user preference
     }
+    /**
+     * UNIFIED PROCESSOR
+     * MOVED FROM: Redundant loops in train() and test()
+    */
 
 
-    public void train()     // train model on mnist data  
-    {                     // get images from dataReader 
-        images = DataReader.readData("D:\\Programming Projects\\Java Programmes\\Neural-Network\\src\\data\\mnist_train.csv");
-    
-        for ( int i = 0; i < images.size(); i++ ) 
-        {
-            System.out.println( "Training sample: " + i );
-
-            int label = images.get( i ).getLabel();         // True label (0-9)
-            currInput = images.get( i ).getData();          // Input to the network
-    
-            double[] trueOutput = new double[ OutputSize ]; // hot coded vector (arr[trueLabel] =  1 else 0)
-            trueOutput[ label ] = 1;
-            
-            forwardPass();               // get output for each input
-
-            backpropogation( trueOutput ); // get error(Loss->scalar), compute gradients (calculate by how much the network is wrong)
-            
-            updateWeightsAndBiases();    // update the parameters based on the the Loss by gradient decent algorithm 
+    public void processData(String path) {
+        if (currentState == null) {
+            throw new IllegalStateException("State Error: No Mode (Training/Testing) set!");
         }
-        
-    }
+        //data passed as anrgument and not as a member variable
 
-    public void test()   // test the network on seperate data
-    {
-        images = DataReader.readData("D:\\Programming Projects\\Java Programmes\\Neural-Network\\src\\data\\mnist_test.csv");
+        List<Image> images = DataReader.readData(path);
         
-        int total = images.size();
-        int correct = 0;
-        
-        for ( int i = 0; i < images.size(); i++ ) 
-        {
-            System.out.println( "Testing sample: " + i );
+        for (int i = 0; i < images.size(); i++) {
+            // DELEGATION: The state decides how to handle the sample
+            currentState.handleSample(this, images.get(i));
 
-            int label = images.get( i ).getLabel();   // True label (0-9)
-            currInput = images.get( i ).getData();    // Input to the network
-    
-            
-            forwardPass();                 // get output for each input
-            
-            // Find predicted label (index of max output probability)
-            int predicted = 0;
-            double maxProb = currOutput[ 0 ];
-            for ( int j = 1; j < OutputSize; j++ ) 
-            {
-                if ( currOutput[j] > maxProb ) 
-                {
-                    maxProb = currOutput[ j ];
-                    predicted = j;           // the j with max prob is the prediction
-                }
+            // INTERNAL VALIDATION: Applied every 1000 samples regardless of state
+            if (i % 1000 == 0) {
+                validateLayers();
+                System.out.println(currentState.getStateName() + " Progress: " + i + "/" + images.size());
             }
-    
-            // Check if prediction matches true label
-            if ( label == predicted )
-                correct++;
         }
-    
-        double accuracy = ( correct * 100.0 ) / total;
         
-        // Calculate and print accuracy
-        System.out.println();
-        System.out.println("====================================");
-        
-        System.out.println( "Total test samples: " + total );
-        System.out.println( "Correct predictions: " + correct );
-        System.out.println( "Accuracy: " + accuracy + "%" );
-        System.out.println( "Learning Rate: " + LEARNING_RATE );
-
-        System.out.println("====================================");
-        System.out.println();
+        // Notify state that the data set is finished (e.g., to print accuracy)
+        currentState.onStateExit();
+        if(currentState instanceof TestingState)
+            System.out.printf("Learning Rate: %.2f\n",LEARNING_RATE);
     }
 
-    private void forwardPass()  // z = Wx + b , a = activation(z)
-    {
+    //MOVED FROM: private access to public
+    // The state needs to trigger the forward flow.
+    public void forwardPass(double[] currInput)  // z = Wx + b , a = activation(z)
+    {//input now passed as an argument instead of it being a member variable
         
         layers[ 0 ].setInput( currInput );  // Set input for first layer
         
@@ -129,27 +93,37 @@ public class NeuralNetwork
         }
     }
 
-    private void backpropogation( double[] trueOutput )
+    public void backpropogation( double[] trueOutput )
     {
         for ( Layer l : layers ) l.resetGradients();  // reset the gradients computed in last iteration
 
         
-        OutputLayer o = ( OutputLayer ) layers[ size - 1 ]; // start with output layer
-        o.calculateLocalGradient( trueOutput );           // compute the local gradient and all other gradients needed to update parameters
+        Layer outputLayer = layers[size - 1]; // start with output layer
 
-        double[] upstreamGradient = o.getUpstreamGradient();  // the gradient that each layer sends to prev layer
+
+        // Calculate (a - y) as the upstream gradient for Softmax + Cross-Entropy
+        double[] outputError = new double[OutputSize];
+        for (int i = 0; i < OutputSize; i++) {
+            outputError[i] = outputLayer.getOutput()[i] - trueOutput[i];
+        } 
+        
+        // NO CASTING NEEDED: Generic method call
+        outputLayer.calculateLocalGradient(outputError);
+
+        // 2. Backpropagate through hidden layers
+        double[] upstreamGradient = outputLayer.getUpstreamGradient();  // the gradient that each layer sends to prev layer
 
 
         for ( int i = size - 2; i >= 0; i-- )  // backprop through all layers till input layer
         {
-            HiddenLayer h = ( HiddenLayer ) layers[ i ];
-            h.calculateLocalGradient( upstreamGradient );
+            // NO CASTING NEEDED: All layers are just 'Layer'
+            layers[i].calculateLocalGradient( upstreamGradient );
 
-            upstreamGradient = h.getUpstreamGradient();    // set the upstream gradient for each layer 
+            upstreamGradient = layers[i].getUpstreamGradient();    // set the upstream gradient for each layer 
         }
     }
 
-    private void updateWeightsAndBiases()  // update parameters (weights and biases for each layer)
+    public void updateWeightsAndBiases()  // update parameters (weights and biases for each layer)
     {
         for ( Layer l : layers )  // start with output layer and go till first layer
         {
@@ -158,22 +132,38 @@ public class NeuralNetwork
         }
     }
 
+    private void validateLayers() {
+        for (Layer l : layers) {
+            l.validateInternals();
+        }
+    }
+
     private void initLayers()    // init all hidden layers + output layer and give random values to weights
     {                            //  and 0 values to biases 
         
         layers = new Layer[ size ];
 
-        
-        layers[ 0 ] = new HiddenLayer( currInput, hiddenLayers[ 0 ] ); // main input to network goes to first hidden
+        // 1. Create First Hidden Layer
+        // MOVED FROM: Manual 'new HiddenLayer' instantiation
+        layers[ 0 ] = LayerFactory.createHiddenLayer(currInput, hiddenLayers[0]); // main input to network goes to first hidden
 
-
+         // 2. Create number of Hidden Layers
         for ( int i = 1; i < size - 1; i++ )
         
-            layers[ i ]  = new HiddenLayer( layers[ i - 1 ].getOutput(), hiddenLayers[ i ] ); // each next layer gets reference to output of prev layer as input
+            layers[ i ]  = LayerFactory.createHiddenLayer( layers[ i - 1 ].getOutput(), hiddenLayers[ i ]); // each next layer gets reference to output of prev layer as input
         
-
-        layers[ size - 1 ] = new OutputLayer( layers[ size - 2 ].getOutput(), OutputSize );
+        // 3. Create Output Layer with SoftMax
+        layers[ size - 1 ] = LayerFactory.createOutputLayer( layers[ size - 2 ].getOutput(), OutputSize);
 
         currOutput = layers[ size - 1 ].getOutput();      // main output of network 
+        
+        for (Layer l : layers) {
+            l.validateInternals(); 
+        }
+        System.out.println("Structure Validation: Passed.");
     }
+    // Setters and Getters for State Interaction
+    public void setMode(NetworkState state) { this.currentState = state; }
+    public double[] getCurrOutput() {return currOutput;}
+    public int getOutputSize() { return OutputSize; }
 }
