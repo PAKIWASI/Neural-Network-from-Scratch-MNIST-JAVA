@@ -1,12 +1,11 @@
 package neuralNetwork;
 
-
-
 public class Main
 {
 
     public static void main( String[] args )
     {
+        /*Old version, had manual setting up of the neural network
         double LEARNING_RATE = 0.01;
 
         int[] hidden = { 128, 64 };
@@ -15,7 +14,11 @@ public class Main
         
         nn.train();
         
-        nn.test();
+        nn.test();*/
+
+        //NEW version
+        NetworkFacade NF=new NetworkFacade();
+        NF.runFullExperiment();
     }
 
 }
