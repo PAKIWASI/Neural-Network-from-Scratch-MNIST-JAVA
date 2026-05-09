@@ -1,13 +1,15 @@
 package neuralNetwork;
 
 import java.util.List;
-import java.util.Arrays;
 
 import data.DataReader;
 import data.Image;
+
 import layers.Layer;
 import layers.LayerFactory;
-// Use the LayerFactory to implement implementation
+// Use the LayerFactory to implement the layers
+import neuralNetwork.states.NetworkState;
+import neuralNetwork.states.TestingState;
 
 
 
@@ -16,9 +18,9 @@ public class NeuralNetwork
 {
     
     private Layer[] layers;                // array of all layers
+    private NetworkState currentState;      // THE STATE (Mode)
 
-    private List< Image > images;          // training / testing images
-    private double[] currInput;            // the current input to the network
+    private double[] currInput;            // the current input the network
     private double[] currOutput;           // the current ouput from the network
 
     private final int inputSize = 784;     // size of mnist image vector
@@ -42,90 +44,41 @@ public class NeuralNetwork
 
         initLayers();                       // assign layers by user preference
     }
+    /**
+     * UNIFIED PROCESSOR
+     * MOVED FROM: Redundant loops in train() and test()
+    */
 
 
-    public void train()     // train model on mnist data  
-    {                     // get images from dataReader 
-        images = DataReader.readData("dataset/mnist_train.csv");
-    
-        for ( int i = 0; i < images.size(); i++ ) 
-        {
-            System.out.println( "Training sample: " + i );
+    public void processData(String path) {
+        if (currentState == null) {
+            throw new IllegalStateException("State Error: No Mode (Training/Testing) set!");
+        }
+        //data passed as anrgument and not as a member variable
 
-            int label = images.get( i ).getLabel();         // True label (0-9)
-            currInput = images.get( i ).getData();          // Input to the network
-    
-            double[] trueOutput = new double[ OutputSize ]; // hot coded vector (arr[trueLabel] =  1 else 0)
-            trueOutput[ label ] = 1;
-            
-            forwardPass();               // get output for each input
+        List<Image> images = DataReader.readData(path);
+        
+        for (int i = 0; i < images.size(); i++) {
+            // DELEGATION: The state decides how to handle the sample
+            currentState.handleSample(this, images.get(i));
 
-            // Diagnostic: Check for NaN
-            if (Double.isNaN(currOutput[0])) {
-                System.err.println("CRITICAL ERROR: Output is NaN at training sample " + i);
-                // Print pre-activation values of the output layer to see if they exploded
-                System.out.println(Arrays.toString(layers[size-1].getPreActOutput())); 
-                System.exit(1); 
+            // INTERNAL VALIDATION: Applied every 1000 samples regardless of state
+            if (i % 1000 == 0) {
+                validateLayers();
+                System.out.println(currentState.getStateName() + " Progress: " + i + "/" + images.size());
             }
-
-            backpropogation( trueOutput ); // get error(Loss->scalar), compute gradients (calculate by how much the network is wrong)
-            
-            updateWeightsAndBiases();    // update the parameters based on the the Loss by gradient decent algorithm 
         }
         
+        // Notify state that the data set is finished (e.g., to print accuracy)
+        currentState.onStateExit();
+        if(currentState instanceof TestingState)
+            System.out.printf("Learning Rate: %.2f\n",LEARNING_RATE);
     }
 
-    public void test()   // test the network on seperate data
-    {
-        images = DataReader.readData("dataset/mnist_test.csv");
-        
-        int total = images.size();
-        int correct = 0;
-        
-        for ( int i = 0; i < images.size(); i++ ) 
-        {
-            System.out.println( "Testing sample: " + i );
-
-            int label = images.get( i ).getLabel();   // True label (0-9)
-            currInput = images.get( i ).getData();    // Input to the network
-    
-            
-            forwardPass();                 // get output for each input
-            
-            // Find predicted label (index of max output probability)
-            int predicted = 0;
-            double maxProb = currOutput[ 0 ];
-            for ( int j = 1; j < OutputSize; j++ ) 
-            {
-                if ( currOutput[j] > maxProb ) 
-                {
-                    maxProb = currOutput[ j ];
-                    predicted = j;           // the j with max prob is the prediction
-                }
-            }
-    
-            // Check if prediction matches true label
-            if ( label == predicted )
-                correct++;
-        }
-    
-        double accuracy = ( correct * 100.0 ) / total;
-        
-        // Calculate and print accuracy
-        System.out.println();
-        System.out.println("====================================");
-        
-        System.out.println( "Total test samples: " + total );
-        System.out.println( "Correct predictions: " + correct );
-        System.out.println( "Accuracy: " + accuracy + "%" );
-        System.out.println( "Learning Rate: " + LEARNING_RATE );
-
-        System.out.println("====================================");
-        System.out.println();
-    }
-
-    private void forwardPass()  // z = Wx + b , a = activation(z)
-    {
+    //MOVED FROM: private access to public
+    // The state needs to trigger the forward flow.
+    public void forwardPass(double[] currInput)  // z = Wx + b , a = activation(z)
+    {//input now passed as an argument instead of it being a member variable
         
         layers[ 0 ].setInput( currInput );  // Set input for first layer
         
@@ -140,7 +93,7 @@ public class NeuralNetwork
         }
     }
 
-    private void backpropogation( double[] trueOutput )
+    public void backpropogation( double[] trueOutput )
     {
         for ( Layer l : layers ) l.resetGradients();  // reset the gradients computed in last iteration
 
@@ -170,12 +123,18 @@ public class NeuralNetwork
         }
     }
 
-    private void updateWeightsAndBiases()  // update parameters (weights and biases for each layer)
+    public void updateWeightsAndBiases()  // update parameters (weights and biases for each layer)
     {
         for ( Layer l : layers )  // start with output layer and go till first layer
         {
             l.updateWeights( LEARNING_RATE ); // update weights and biases of each
             l.updateBiases( LEARNING_RATE );
+        }
+    }
+
+    private void validateLayers() {
+        for (Layer l : layers) {
+            l.validateInternals();
         }
     }
 
@@ -203,4 +162,8 @@ public class NeuralNetwork
         }
         System.out.println("Structure Validation: Passed.");
     }
+    // Setters and Getters for State Interaction
+    public void setMode(NetworkState state) { this.currentState = state; }
+    public double[] getCurrOutput() {return currOutput;}
+    public int getOutputSize() { return OutputSize; }
 }
