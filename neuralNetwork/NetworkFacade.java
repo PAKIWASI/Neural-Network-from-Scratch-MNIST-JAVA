@@ -1,7 +1,10 @@
 package neuralNetwork;
 
+import neuralNetwork.states.*;
+
 public class NetworkFacade {
     private NeuralNetwork network;
+    private NetworkState ns;
     // Armaghan's State pattern will go here 
 
     public NetworkFacade() {
@@ -14,13 +17,20 @@ public class NetworkFacade {
     public void runFullExperiment() {
         
         System.out.println("Starting Setup...");
+
+        String trainingFilePath = "dataset/mnist_train.csv";
+        String testingFilePath = "dataset/mnist_test.csv";
         
         // Armaghan's state logic will just be a method call here:
         // stateManager.setTrainingState(); 
-        network.train();
+        ns = new TrainingState();
+        network.setMode(ns);
+        network.processData(trainingFilePath);
         
         // stateManager.setTestingState();
-        network.test();
+        ns = new TestingState();
+        network.setMode(ns);
+        network.processData(testingFilePath);
         
         System.out.println("Experiment Complete.");
     }
