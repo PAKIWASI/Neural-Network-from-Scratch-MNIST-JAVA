@@ -11,11 +11,13 @@ public class Main
 
         int[] hidden = { 128, 64 };
 
-        NeuralNetwork nn = new NeuralNetwork( hidden, LEARNING_RATE );
+        NeuralNetwork newNet = new NeuralNetwork( hidden, LEARNING_RATE );
         
-        nn.train();
+        newNet.train();
         
-        nn.test();
+        newNet.test();
     }
+
+    
 
 }

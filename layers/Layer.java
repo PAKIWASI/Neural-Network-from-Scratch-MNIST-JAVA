@@ -9,31 +9,33 @@ import layers.strategies.SoftmaxStrategy;
 /**
  * REFACTORED: Now a concrete class using Strategy Pattern.
  * Removed: 'abstract' keyword and subclass-specific logic.
+ * coverted all the protected variables to private as we dont 
+ * to make subclasses now
  */
 public class Layer 
 {
     private double[] input;           // x      1 x m input vector from prev layer
     private double[][] weights;       // W      m x n weight matrix
     private double[] bias;            // b      1 x n bias vector
-    protected double[] preActOutput;  // z = xW + b  -> 1 x n
-    protected double[] actOutput;     // a = act(z)  -> 1 x n
+    private double[] preActOutput;  // z = xW + b  -> 1 x n
+    private double[] actOutput;     // a = act(z)  -> 1 x n
 
     private static Random rand;
 
-    protected final int inputSize;
-    protected final int outputSize;
+    private final int inputSize;
+    private final int outputSize;
 
     // STRATEGY: Decouples activation math from this class
-    protected ActivationStrategy strategy;
+    private ActivationStrategy strategy;
 
     // Gradients
-    protected double[] dL_dz;  // local gradient dL/dz = dL/da x (da/dz)T (1 x n) x (n x 1) = n x n (here->1 x n, we work implicitly, element wise xply)  
-    protected double[] dL_dx;  // downstream gradient (will send to previous layer) dL/dx = dL/dz x dz/dx = dL/dz x WT  (1 x n) x (m x n)T = (1 x m)
+    private double[] dL_dz;  // local gradient dL/dz = dL/da x (da/dz)T (1 x n) x (n x 1) = n x n (here->1 x n, we work implicitly, element wise xply)  
+    private double[] dL_dx;  // downstream gradient (will send to previous layer) dL/dx = dL/dz x dz/dx = dL/dz x WT  (1 x n) x (m x n)T = (1 x m)
 
     // Gradients to Update Weights and Biases
                                 // m x n =  m x 1     1 x n
-    protected double[][] dL_dW;   // dL/dW = (dz/dW)T x dL/dz = (x)T x dL/dz 
-    protected double[] dL_db;     // dL/db = dL/dz x dz/db = dL/dz x 1     (1 x n) = (1 x n) x 1 , dz/db = 1
+    private double[][] dL_dW;   // dL/dW = (dz/dW)T x dL/dz = (x)T x dL/dz 
+    private double[] dL_db;     // dL/db = dL/dz x dz/db = dL/dz x 1     (1 x n) = (1 x n) x 1 , dz/db = 1
 
     // REFACTORED: Constructor now accepts the Strategy
     public Layer( double[] input, int outputSize, ActivationStrategy strategy )
@@ -57,6 +59,25 @@ public class Layer
 
         initWeights();
         initBiases();
+    }
+
+    public void validateInternals() {
+        // Check 1: Did weights initialize?
+        if (weights == null || weights[0][0] == 0 && weights[0][1] == 0) {
+            throw new IllegalStateException("Layer Error: Weights are uninitialized or all zero.");
+        }
+
+        // Check 2: Is the Strategy attached?
+        if (strategy == null) {
+            throw new IllegalStateException("Layer Error: No ActivationStrategy assigned.");
+        }
+
+        // Check 3: Is data flowing? (Check for NaN or Dead Neurons)
+        for (double val : actOutput) {
+            if (Double.isNaN(val)) {
+                throw new ArithmeticException("Layer Error: NaN detected in output of " + strategy.getClass().getSimpleName());
+            }
+        }
     }
 
     public void calculateOutput() // z = xW + b -> 1 x n
@@ -126,7 +147,7 @@ public class Layer
     }
 
 
-    protected void initWeights()
+    private void initWeights()
     {
         weights = new double[ inputSize ][ outputSize ]; // m x n
 
@@ -184,5 +205,7 @@ public class Layer
 
     
     public double[] getUpstreamGradient() { return dL_dx; }
+
+    public double[] getPreActOutput() {return preActOutput;}
 
 }

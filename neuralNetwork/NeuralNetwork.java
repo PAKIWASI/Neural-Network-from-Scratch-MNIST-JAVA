@@ -1,11 +1,13 @@
 package neuralNetwork;
 
 import java.util.List;
+import java.util.Arrays;
 
 import data.DataReader;
 import data.Image;
 import layers.Layer;
-import layers.strategies.*;// Use the new Layer and Strategies
+import layers.LayerFactory;
+// Use the LayerFactory to implement implementation
 
 
 
@@ -57,6 +59,14 @@ public class NeuralNetwork
             trueOutput[ label ] = 1;
             
             forwardPass();               // get output for each input
+
+            // Diagnostic: Check for NaN
+            if (Double.isNaN(currOutput[0])) {
+                System.err.println("CRITICAL ERROR: Output is NaN at training sample " + i);
+                // Print pre-activation values of the output layer to see if they exploded
+                System.out.println(Arrays.toString(layers[size-1].getPreActOutput())); 
+                System.exit(1); 
+            }
 
             backpropogation( trueOutput ); // get error(Loss->scalar), compute gradients (calculate by how much the network is wrong)
             
@@ -175,16 +185,22 @@ public class NeuralNetwork
         layers = new Layer[ size ];
 
         // 1. Create First Hidden Layer
-        layers[ 0 ] = new Layer( currInput, hiddenLayers[ 0 ], new RELUStrategy() ); // main input to network goes to first hidden
+        // MOVED FROM: Manual 'new HiddenLayer' instantiation
+        layers[ 0 ] = LayerFactory.createHiddenLayer(currInput, hiddenLayers[0]); // main input to network goes to first hidden
 
          // 2. Create number of Hidden Layers
         for ( int i = 1; i < size - 1; i++ )
         
-            layers[ i ]  = new Layer( layers[ i - 1 ].getOutput(), hiddenLayers[ i ], new RELUStrategy() ); // each next layer gets reference to output of prev layer as input
+            layers[ i ]  = LayerFactory.createHiddenLayer( layers[ i - 1 ].getOutput(), hiddenLayers[ i ]); // each next layer gets reference to output of prev layer as input
         
         // 3. Create Output Layer with SoftMax
-        layers[ size - 1 ] = new Layer( layers[ size - 2 ].getOutput(), OutputSize, new SoftmaxStrategy() );
+        layers[ size - 1 ] = LayerFactory.createOutputLayer( layers[ size - 2 ].getOutput(), OutputSize);
 
         currOutput = layers[ size - 1 ].getOutput();      // main output of network 
+        
+        for (Layer l : layers) {
+            l.validateInternals(); 
+        }
+        System.out.println("Structure Validation: Passed.");
     }
 }

@@ -22,7 +22,7 @@ public class SoftmaxStrategy implements ActivationStrategy{
         for ( int i = 0; i < outputSize; i++ ) 
         {
             a[ i ] = Math.exp( z[ i ] - max );
-            sum += z[ i ];
+            sum += a[ i ];
         }
         
         // Normalize to probabilities
