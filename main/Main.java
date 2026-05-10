@@ -1,9 +1,5 @@
 package main;
 import neuralNetwork.NetworkFacade;
-import neuralNetwork.NeuralNetwork;
-import neuralNetwork.states.TrainingState;
-import neuralNetwork.states.TestingState;
-import data.AdapterHandler;
 
 public class Main
 {
