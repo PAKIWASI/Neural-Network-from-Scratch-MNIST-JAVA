@@ -24,8 +24,11 @@ public class NetworkFacade {
         System.out.println("Starting Setup...");
 
         // These paths now support CSV, binary, or mixed folders
-        String trainingFilePath = "dataset/mnist_train.csv";
-        String testingFilePath = "dataset/mnist_test.csv";
+        String trainingFilePathCSV = "dataset/mnist_train.csv";
+        String trainingFilePathBin = "dataset/train-labels-idx1-ubyte.gz";
+
+        String testingFilePathBin = "dataset/t10k-labels-idx1-ubyte.gz";
+        String testingFilePathCSV = "dataset/mnist_test.csv";
         
         // Alternative: Binary files in folders
         // String trainingFilePath = "dataset/mnist/train";
@@ -33,11 +36,13 @@ public class NetworkFacade {
         
         ns = new TrainingState();
         network.setMode(ns);
-        network.processData(trainingFilePath);
+        network.processData(trainingFilePathCSV);
+        network.processData(trainingFilePathBin);
         
         ns = new TestingState();
         network.setMode(ns);
-        network.processData(testingFilePath);
+        network.processData(testingFilePathCSV);
+        network.processData(testingFilePathBin);
         
         System.out.println("Experiment Complete.");
     }
