@@ -17,7 +17,9 @@ public class Image
     public double[] getData() { return data; }
 
     public int getLabel() { return label; }
-    
+    //setter for label, for binary data
+    public void setLabel(int label) { this.label = label; }
+
     @Override
     public String toString()  // print image in console
     {
